@@ -1,13 +1,14 @@
 #include "dss.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 typedef struct {
   /*size of allocated memory in bytes for struct dss_hdr and buf */
-  size_t size;
+  uint32_t size;
   /*number of bytes occupied in buf */
-  size_t len;
+  uint32_t len;
   char buf[];
 } dss_hdr;
 
@@ -29,7 +30,6 @@ dss dss_newb(const void *s, size_t len) {
 
   memcpy(hdr->buf, (const char *)s, len);
   hdr->buf[hdr->len] = '\0';
-  printf("len: %ld\n size: %ld\n", hdr->len, hdr->size);
 
   return hdr->buf;
 }
