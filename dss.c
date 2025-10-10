@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 typedef struct {
   /*size of allocated memory in bytes for struct dss_hdr and buf */
@@ -26,6 +27,9 @@ dss dss_newb(const void *s, size_t len) {
   }
 
   hdr->size = sizeof(dss_hdr) + len + DSS_NULLT;
+  /* hdr->len totals with DSS_NULLT because hdr->len means number of bytes
+   * currently occupied in the buf which includes the null terminator as well.
+   */
   hdr->len = len + DSS_NULLT;
 
   memcpy(hdr->buf, (const char *)s, len);
@@ -60,7 +64,12 @@ dss dss_concatb(dss s, const void *t, size_t len) {
    * happen from the current position of null terminator */
   memcpy(hdr->buf + hdr->len - DSS_NULLT, t, len);
   hdr->len = hdr->len + len;
-  hdr->buf[hdr->len + DSS_NULLT] = '\0';
+  hdr->buf[hdr->len] = '\0';
 
   return hdr->buf;
+}
+
+size_t dss_len(const dss s) {
+  dss_hdr *hdr = (dss_hdr *)((char *)s - sizeof(dss_hdr));
+  return hdr->len;
 }
