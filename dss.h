@@ -11,5 +11,7 @@ typedef char *dss;
 
 dss dss_new(const char *);
 dss dss_newb(const void *, size_t);
+dss dss_concat(dss, const char *);
+dss dss_concatb(dss, const void *, size_t);
 
 #endif
