@@ -15,15 +15,15 @@ dss dss_new(const char *s) {
 }
 
 dss dss_newb(const void *s, size_t len) {
-  dss_hdr *hdr = (dss_hdr *)malloc(sizeof(dss_hdr) + len + 1);
+  dss_hdr *hdr = (dss_hdr *)malloc(sizeof(dss_hdr) + len + DSS_NULLT);
 
   if (!hdr) {
     fprintf(stderr, "Not able to allocate memory.");
     exit(EXIT_FAILURE);
   }
 
-  hdr->size = sizeof(dss_hdr) + len + 1;
-  hdr->len = len + 1;
+  hdr->size = sizeof(dss_hdr) + len + DSS_NULLT;
+  hdr->len = len + DSS_NULLT;
 
   memcpy(hdr->buf, (const char *)s, len);
   hdr->buf[hdr->len] = '\0';

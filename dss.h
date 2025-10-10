@@ -3,6 +3,9 @@
 
 #include <stdio.h>
 
+/* Extra byte allocated for a null terminator (for C-string compatibility) */
+#define DSS_NULLT 1
+
 struct dss_hdr;
 typedef char *dss;
 
