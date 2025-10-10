@@ -8,7 +8,9 @@
 typedef struct {
   /*size of allocated memory in bytes for struct dss_hdr and buf */
   uint32_t size;
-  /*number of bytes occupied in buf */
+  /* Number of bytes occupied in buf. len is total bytes in buf + null term.
+   * That's why creating empty dss string using dss_empty should result in
+   * len=1.*/
   uint32_t len;
   char buf[];
 } dss_hdr;
@@ -72,4 +74,19 @@ dss dss_concatb(dss s, const void *t, size_t len) {
 size_t dss_len(const dss s) {
   dss_hdr *hdr = (dss_hdr *)((char *)s - sizeof(dss_hdr));
   return hdr->len;
+}
+
+dss dss_dup(const dss s) {
+  dss_hdr *hdr = (dss_hdr *)((char *)s - sizeof(dss_hdr));
+  dss dups = malloc(hdr->len);
+  memcpy(dups, s, hdr->len);
+  return dups;
+}
+
+/*Create an empty dss string i.e. nothing goes in the buffer but
+ * a null term. Because of the presence of the null term, dss_len should
+ * return 1.*/
+dss dss_empty() {
+  ;
+  return dss_newb("", 0);
 }
