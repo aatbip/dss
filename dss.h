@@ -16,5 +16,6 @@ dss dss_concatb(dss, const void *, size_t);
 size_t dss_len(const dss);
 dss dss_dup(const dss);
 dss dss_empty(void);
+void dss_free(dss);
 
 #endif

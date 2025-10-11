@@ -25,7 +25,7 @@ dss dss_newb(const void *s, size_t len) {
 
   if (!hdr) {
     fprintf(stderr, "Not able to allocate memory.");
-    exit(EXIT_FAILURE);
+    return NULL;
   }
 
   hdr->size = sizeof(dss_hdr) + len + DSS_NULLT;
@@ -78,9 +78,13 @@ size_t dss_len(const dss s) {
 
 dss dss_dup(const dss s) {
   dss_hdr *hdr = (dss_hdr *)((char *)s - sizeof(dss_hdr));
-  dss dups = malloc(hdr->len);
-  memcpy(dups, s, hdr->len);
-  return dups;
+  dss_hdr *dup_hdr = (dss_hdr *)malloc(hdr->size);
+  if (!dup_hdr) {
+    fprintf(stderr, "Not able to allocate memory.");
+    return NULL;
+  }
+  memcpy(dup_hdr, hdr, hdr->size);
+  return dup_hdr->buf;
 }
 
 /*Create an empty dss string i.e. nothing goes in the buffer but
@@ -89,4 +93,9 @@ dss dss_dup(const dss s) {
 dss dss_empty() {
   ;
   return dss_newb("", 0);
+}
+
+void dss_free(dss s) {
+  dss_hdr *hdr = (dss_hdr *)((char *)s - sizeof(dss_hdr));
+  free(hdr);
 }
