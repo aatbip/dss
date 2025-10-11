@@ -51,7 +51,7 @@ dss dss_concat(dss s, const char *t) {
 }
 
 dss dss_concatb(dss s, const void *t, size_t len) {
-  dss_hdr *hdr = (dss_hdr *)((char *)s - sizeof(dss_hdr));
+  dss_hdr *hdr = DSS_HDR(s);
 
   /* Remaining bytes in buffer */
   size_t rem_buf = hdr->size - sizeof(dss_hdr) - hdr->len;
@@ -77,12 +77,12 @@ dss dss_concatb(dss s, const void *t, size_t len) {
 }
 
 size_t dss_len(const dss s) {
-  dss_hdr *hdr = (dss_hdr *)((char *)s - sizeof(dss_hdr));
+  dss_hdr *hdr = DSS_HDR(s);
   return hdr->len;
 }
 
 dss dss_dup(const dss s) {
-  dss_hdr *hdr = (dss_hdr *)((char *)s - sizeof(dss_hdr));
+  dss_hdr *hdr = DSS_HDR(s);
   dss_hdr *dup_hdr = (dss_hdr *)malloc(hdr->size);
   if (!dup_hdr) {
     fprintf(stderr, "Not able to allocate memory.");
