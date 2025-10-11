@@ -5,6 +5,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#define DSS_HDR(s) ((dss_hdr *)((char *)s - sizeof(dss_hdr)))
+
 typedef struct {
   /*size of allocated memory in bytes for struct dss_hdr and buf */
   uint32_t size;
@@ -12,6 +14,8 @@ typedef struct {
    * That's why creating empty dss string using dss_empty should result in
    * len=1.*/
   uint32_t len;
+  /*Tracks the number of references created. */
+  uint32_t ref_count;
   char buf[];
 } dss_hdr;
 
@@ -36,6 +40,7 @@ dss dss_newb(const void *s, size_t len) {
 
   memcpy(hdr->buf, (const char *)s, len);
   hdr->buf[hdr->len] = '\0';
+  hdr->ref_count = 1;
 
   return hdr->buf;
 }
@@ -96,6 +101,28 @@ dss dss_empty() {
 }
 
 void dss_free(dss s) {
-  dss_hdr *hdr = (dss_hdr *)((char *)s - sizeof(dss_hdr));
-  free(hdr);
+  dss_hdr *hdr = DSS_HDR(s);
+  /* free only if ref_count equals to 0. */
+  if (--hdr->ref_count == 0) {
+    free(hdr);
+  }
+}
+
+/* Always use dss_refshare when passing a dss string to another function
+ * that will share ownership of it. This ensures dss_hdr->ref_count is
+ * incremented correctly for reference tracking.
+ *
+ * Note:
+ * - dss_refshare should be used only when transferring shared ownership.
+ * - The callee (the receiver of the shared reference) is responsible
+ *   for eventually calling dss_free() once done.
+ * - You can pass the dss string directly (without dss_refshare) when
+ *   the callee is only borrowing or fully taking ownership. In this case
+ *   callee shouldn't call dss_free().
+ */
+
+dss dss_refshare(dss s) {
+  DSS_HDR(s)->ref_count++;
+  printf("cur ref: %d\n", DSS_HDR(s)->ref_count);
+  return s;
 }

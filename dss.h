@@ -6,7 +6,6 @@
 /* Extra byte allocated for a null terminator (for C-string compatibility) */
 #define DSS_NULLT 1
 
-struct dss_hdr;
 typedef char *dss;
 
 dss dss_new(const char *);
@@ -17,5 +16,7 @@ size_t dss_len(const dss);
 dss dss_dup(const dss);
 dss dss_empty(void);
 void dss_free(dss);
+
+dss dss_refshare(dss);
 
 #endif
