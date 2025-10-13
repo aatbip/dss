@@ -19,6 +19,35 @@ typedef struct {
   char buf[];
 } dss_hdr;
 
+/*It reallocates memory if required otherwise returns the same address*/
+static dss_hdr *dss_expand(dss_hdr *hdr, size_t len) {
+  /* Remaining bytes in buffer */
+  size_t rem_buf = hdr->size - sizeof(dss_hdr) - hdr->len;
+  /* Increase size by two times the length of t.
+   * This approach is taken to minimize realloc call
+   * everytime dss_concat is called.
+   *
+   * Note: should stop increasing size if it's already crossing
+   * the limit. This logic should be added later.
+   */
+  if (rem_buf == 0 || rem_buf < len) {
+    hdr->size = hdr->size + len * 2;
+    hdr = (dss_hdr *)realloc(hdr, hdr->size);
+  }
+  return hdr;
+}
+
+/* Appends byte and add null term at the end */
+static inline dss_hdr *dss_append_bytes(dss_hdr *hdr, const void *t,
+                                        size_t len) {
+  /* In the below memcpy DSS_NULLT is subtracted because copy should
+   * happen from the current position of null terminator */
+  memcpy(hdr->buf + hdr->len - DSS_NULLT, t, len);
+  hdr->len = hdr->len + len;
+  hdr->buf[hdr->len] = '\0';
+  return hdr;
+}
+
 dss dss_new(const char *s) {
   size_t len = strlen(s);
   return dss_newb(s, len);
@@ -53,25 +82,13 @@ dss dss_concat(dss s, const char *t) {
 dss dss_concatb(dss s, const void *t, size_t len) {
   dss_hdr *hdr = DSS_HDR(s);
 
-  /* Remaining bytes in buffer */
-  size_t rem_buf = hdr->size - sizeof(dss_hdr) - hdr->len;
+  if (len == 0)
+    return hdr->buf;
 
-  /* Increase size by two times the length of t.
-   * This approach is taken to minimize realloc call
-   * everytime dss_concat is called.
-   *
-   * Note: should stop increasing size if it's already crossing
-   * the limit. This logic should be added later.
-   */
-  if (rem_buf == 0 || rem_buf < len) {
-    hdr->size = hdr->size + len * 2;
-    hdr = (dss_hdr *)realloc(hdr, hdr->size);
-  }
-  /* In the below memcpy DSS_NULLT is subtracted because copy should
-   * happen from the current position of null terminator */
-  memcpy(hdr->buf + hdr->len - DSS_NULLT, t, len);
-  hdr->len = hdr->len + len;
-  hdr->buf[hdr->len] = '\0';
+  /*Reallocate memory if required*/
+  hdr = dss_expand(hdr, len);
+
+  dss_append_bytes(hdr, t, len);
 
   return hdr->buf;
 }
@@ -115,14 +132,50 @@ void dss_free(dss s) {
  * Note:
  * - dss_refshare should be used only when transferring shared ownership.
  * - The callee (the receiver of the shared reference) is responsible
- *   for eventually calling dss_free() once done.
+ *   for eventually calling dss_free() once done except if callee
+ *   decides to use dss_concatcow for mutating the shared object, in which case,
+ *   dss_concatcow will implicitly unshare the shared object and trasfer the
+ * ownership back to the caller.
  * - You can pass the dss string directly (without dss_refshare) when
- *   the callee is only borrowing or fully taking ownership. In this case
- *   callee shouldn't call dss_free().
+ *   the callee is only borrowing. In this case
+ *   callee shouldn't call dss_free() and no ref_count is incremented.
  */
 
 dss dss_refshare(dss s) {
   DSS_HDR(s)->ref_count++;
-  printf("cur ref: %d\n", DSS_HDR(s)->ref_count);
   return s;
+}
+
+/* dss_concatcow implements Copy-on-write if more than 1 references is detected.
+ * If multiple references is not detected then proceeds with dss_concatb.
+ * Always use dss_refshare(dss s) for the first parameter dss s. The callee is
+ * not required to dss_free the shared reference object because dss_concatcow
+ * will unshare the ownership from callee implicitly.
+ */
+dss dss_concatcow(dss s, const char *t) {
+  size_t len = strlen(t);
+  return dss_concatcowb(s, t, len);
+}
+
+dss dss_concatcowb(dss s, const char *t, size_t len) {
+  dss_hdr *hdr = DSS_HDR(s);
+  /*check if refcount > 1, if true then apply cow*/
+  if (hdr->ref_count > 1) {
+    /*deep copy the dss string*/
+    dss dups = dss_dup(s);
+    dss_hdr *dup_hdr = DSS_HDR(dups);
+
+    if (len == 0)
+      return dup_hdr->buf;
+
+    /*Reallocate memory if required*/
+    dup_hdr = dss_expand(dup_hdr, len);
+
+    dss_append_bytes(dup_hdr, t, len);
+
+    /*Decrease the reference to transfer ownership back to the caller*/
+    hdr->ref_count--;
+    return dup_hdr->buf;
+  }
+  return dss_concatb(s, t, len);
 }
