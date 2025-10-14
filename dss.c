@@ -7,13 +7,13 @@
 
 #define DSS_HDR(s) ((dss_hdr *)((char *)s - sizeof(dss_hdr)))
 
-typedef struct {
+typedef struct __attribute__((__packed__)) {
   /*size of allocated memory in bytes for struct dss_hdr and buf */
-  uint32_t size;
+  uint64_t size;
   /* Number of bytes occupied in buf. len is total bytes in buf + null term.
    * That's why creating empty dss string using dss_empty should result in
    * len=1.*/
-  uint32_t len;
+  uint64_t len;
   /*Tracks the number of references created. */
   uint32_t ref_count;
   char buf[];
@@ -21,8 +21,13 @@ typedef struct {
 
 /*It reallocates memory if required otherwise returns the same address*/
 static dss_hdr *dss_expand(dss_hdr *hdr, size_t len) {
-  /* Remaining bytes in buffer */
-  size_t rem_buf = hdr->size - sizeof(dss_hdr) - hdr->len;
+
+  size_t needed = hdr->len + len + DSS_NULLT;
+  size_t total = hdr->size - sizeof(dss_hdr);
+
+  if (needed <= total)
+    return hdr;
+
   /* Increase size by two times the length of t.
    * This approach is taken to minimize realloc call
    * everytime dss_concat is called.
@@ -30,10 +35,16 @@ static dss_hdr *dss_expand(dss_hdr *hdr, size_t len) {
    * Note: should stop increasing size if it's already crossing
    * the limit. This logic should be added later.
    */
-  if (rem_buf == 0 || rem_buf < len) {
-    hdr->size = hdr->size + len * 2;
-    hdr = (dss_hdr *)realloc(hdr, hdr->size);
+  size_t new_cap = total * 2;
+  if (new_cap < needed)
+    new_cap = needed * 2;
+
+  hdr = realloc(hdr, sizeof(dss_hdr) + new_cap);
+  if (!hdr) {
+    perror("realloc failed");
+    exit(1);
   }
+  hdr->size = sizeof(dss_hdr) + new_cap;
   return hdr;
 }
 
