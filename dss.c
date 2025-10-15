@@ -22,7 +22,9 @@ typedef struct __attribute__((__packed__)) {
 /*It reallocates memory if required otherwise returns the same address*/
 static dss_hdr *dss_expand(dss_hdr *hdr, size_t len) {
 
-  size_t needed = hdr->len + len + DSS_NULLT;
+  /* DSS_NULLT is not included in calculating size_t needed because
+   * hdr->len already includes null term*/
+  size_t needed = hdr->len + len;
   size_t total = hdr->size - sizeof(dss_hdr);
 
   if (needed <= total)
@@ -189,4 +191,16 @@ dss dss_concatcowb(dss s, const char *t, size_t len) {
     return dup_hdr->buf;
   }
   return dss_concatb(s, t, len);
+}
+
+dss dss_grow(dss s, size_t len) {
+  dss_hdr *hdr = DSS_HDR(s);
+  if (len > hdr->len) {
+    hdr = dss_expand(hdr, len);
+    memset(hdr->buf + hdr->len, 0, len);
+    hdr->len = len;
+    hdr->buf[hdr->len] = '\0';
+    return hdr->buf;
+  }
+  return s;
 }

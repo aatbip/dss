@@ -16,6 +16,7 @@ dss dss_concatcow(dss, const char *);
 dss dss_concatcowb(dss, const char *, size_t);
 size_t dss_len(const dss);
 dss dss_dup(const dss);
+dss dss_grow(dss, size_t);
 dss dss_empty(void);
 void dss_free(dss);
 
