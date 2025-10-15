@@ -1,4 +1,5 @@
 #include "dss.h"
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -193,6 +194,11 @@ dss dss_concatcowb(dss s, const char *t, size_t len) {
   return dss_concatb(s, t, len);
 }
 
+/*
+ * Ensures the string is at least 'len' bytes long.
+ * If 'len' exceeds the current length, the buffer is expanded if needed
+ * and the new space is zero-padded up to the 'len' param.
+ */
 dss dss_grow(dss s, size_t len) {
   dss_hdr *hdr = DSS_HDR(s);
   if (len > hdr->len) {
@@ -202,5 +208,22 @@ dss dss_grow(dss s, size_t len) {
     hdr->buf[hdr->len] = '\0';
     return hdr->buf;
   }
+  return s;
+}
+
+dss dss_catprintf(dss s, dss (*concat_func)(dss, const char *), const char *fmt,
+                  ...) {
+  va_list ap, cp;
+  va_start(ap, fmt);
+  va_copy(cp, ap);
+
+  /*find the total bytes needed in fmt string*/
+  int tb = vsnprintf(NULL, 0, fmt, cp);
+  char *temp = malloc(tb);
+  vsnprintf(temp, tb + DSS_NULLT, fmt, ap);
+  /*Expand memory for 'tb' bytes if needed is handled internally in
+   * concat_func*/
+  s = concat_func(s, temp);
+  free(temp);
   return s;
 }
