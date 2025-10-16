@@ -211,6 +211,10 @@ dss dss_grow(dss s, size_t len) {
   return s;
 }
 
+/*Use to append any formatted string to the dss string. It accepts concat_func
+ * as one of the parameters. You can use dss_concat or dss_concat or
+ * dss_concatcow letting you choose the way of concatenation.
+ */
 dss dss_catprintf(dss s, dss (*concat_func)(dss, const char *), const char *fmt,
                   ...) {
   va_list ap, cp;
