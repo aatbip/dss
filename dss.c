@@ -234,6 +234,8 @@ dss dss_catprintf(dss s, dss (*concat_func)(dss, const char *), const char *fmt,
   return s;
 }
 
+/*Returns a trimmed string between start and end. Also shrinks the buffer
+ * to fit the trimmed bytes.*/
 dss dss_trim(dss s, int start, int end) {
   dss_hdr *hdr = DSS_HDR(s);
   uint64_t slen = hdr->len - DSS_NULLT;
