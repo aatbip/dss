@@ -45,7 +45,7 @@ static dss_hdr *dss_expand(dss_hdr *hdr, size_t len) {
   hdr = realloc(hdr, sizeof(dss_hdr) + new_cap);
   if (!hdr) {
     perror("realloc failed");
-    exit(1);
+    return NULL;
   }
   hdr->size = sizeof(dss_hdr) + new_cap;
   return hdr;
@@ -262,7 +262,7 @@ dss dss_trim(dss s, int start, int end) {
   hdr = (dss_hdr *)realloc(hdr, sizeof(dss_hdr) + new_len + DSS_NULLT);
   if (!hdr) {
     perror("realloc failed");
-    exit(1);
+    return NULL;
   }
   hdr->size = sizeof(dss_hdr) + new_len + DSS_NULLT;
 
