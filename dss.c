@@ -233,3 +233,38 @@ dss dss_catprintf(dss s, dss (*concat_func)(dss, const char *), const char *fmt,
   va_end(ap);
   return s;
 }
+
+dss dss_trim(dss s, int start, int end) {
+  dss_hdr *hdr = DSS_HDR(s);
+  uint64_t slen = hdr->len - DSS_NULLT;
+
+  if (start < 0)
+    start = slen + start;
+  if (end < 0)
+    end = slen + end;
+
+  if (start < 0)
+    start = 0;
+  if ((uint64_t)start > slen)
+    start = slen;
+  if (end >= (int)slen)
+    end = slen - 1;
+  if (end < start)
+    end = start - 1;
+
+  uint64_t new_len = end - start + DSS_NULLT;
+
+  memmove(hdr->buf, hdr->buf + start, new_len);
+  hdr->buf[new_len] = '\0';
+  hdr->len = new_len + DSS_NULLT;
+
+  /*Reallocate to shrink the buffer*/
+  hdr = (dss_hdr *)realloc(hdr, sizeof(dss_hdr) + new_len + DSS_NULLT);
+  if (!hdr) {
+    perror("realloc failed");
+    exit(1);
+  }
+  hdr->size = sizeof(dss_hdr) + new_len + DSS_NULLT;
+
+  return hdr->buf;
+}

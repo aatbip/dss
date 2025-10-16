@@ -23,5 +23,6 @@ void dss_free(dss);
 dss dss_refshare(dss);
 
 dss dss_catprintf(dss, dss (*)(dss, const char *), const char *, ...);
+dss dss_trim(dss, int, int);
 
 #endif
