@@ -58,7 +58,7 @@ static inline dss_hdr *dss_append_bytes(dss_hdr *hdr, const void *t,
    * happen from the current position of null terminator */
   memcpy(hdr->buf + hdr->len - DSS_NULLT, t, len);
   hdr->len = hdr->len + len;
-  hdr->buf[hdr->len] = '\0';
+  hdr->buf[hdr->len - 1] = '\0';
   return hdr;
 }
 
