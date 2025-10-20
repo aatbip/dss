@@ -189,6 +189,8 @@ dss dss_concatcowb(dss s, const char *t, size_t len) {
 
     /*Decrease the reference to transfer ownership back to the caller*/
     hdr->ref_count--;
+    /*Refresh the ref_count to 1*/
+    dup_hdr->ref_count = 1;
     return dup_hdr->buf;
   }
   return dss_concatb(s, t, len);
