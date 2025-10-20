@@ -82,7 +82,7 @@ dss dss_newb(const void *s, size_t len) {
   hdr->len = len + DSS_NULLT;
 
   memcpy(hdr->buf, (const char *)s, len);
-  hdr->buf[hdr->len] = '\0';
+  hdr->buf[len] = '\0';
   hdr->ref_count = 1;
 
   return hdr->buf;
