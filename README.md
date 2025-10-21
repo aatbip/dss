@@ -128,12 +128,31 @@ summary on where to use the `dss` internal reference counting and where not to u
 -  while using COW related function APIs for appending the `dss` buffer such as `dss_concatcow` and `dss_concatcowb`. They only perform copy-on-write if there are
 multiple references.
 - for shared references in multiple processes. We won't be sure which process would end at last so reference tracking can be helpful to
-only free the object when the last running process ends.
+only free the object when the last running process ends. Remember to free the object from all the places where references are shared.
 
 ### DO NOT USE reference tracking:
 - when working with mutating function APIs such as `dss_concat` and `dss_concatb`.
 - when the process where object is shared mutates the object. In this case, the original reference should be updated with the valid
 latest reference.
+
+```c
+dss dss_grow(dss, size_t len);
+```
+
+`dss_grow` expands the `dss` buffer to at least the specified length. It will do nothing and returns the original buffer if the requested length is 
+less than or equal to the length of the buffer. Otherwise, it will expand the buffer to the requested length `len` padding zero to the newly allocated
+regions and ensures null terminator at the last byte. The API is used to guarantee that the buffer is initialized up to the specified length.
+
+```c
+char *s = dss_new("hello");
+s = dss_grow(s, 7);
+s[5] = '!';
+printf("%s\n", s);
+dss_free(s);
+
+Output> hello!
+```
+Subscripting assignment is safe in the above example since `dss_grow` expands the buffer up to the given length. 
 
 ## Destroying the `dss` buffer
 ```c
@@ -155,13 +174,50 @@ char *s = dss_new("hello");
 printf("len: %zu\n", dss_len(s));
 dss_free(s);
 
-Output> 6
+Output> len: 6
 ```
 
+## Creating an empty `dss` string
 
+```c
+dss dss_empty(void);
+```
+Creates an empty string by allocating a 1-byte buffer initialized to `0x00` `DSS_NULLT`. 
 
+```c
+char *s = dss_empty();
+printf("len: %zu\n", dss_len(s));
+dss_free(s);
 
+Output> len: 2
+```
+In the above example, `dss_len` output on an empty `dss` string is 1 because `dss_len` gives the output by adding the `DSS_NULLT`.
 
+## Cloning the `dss` buffer
+
+```c
+dss dss_dup(const dss s);
+```
+It copies the `dss` string to a new buffer and returns the pointer to the new buffer. It also refreshes the `ref_count` counter to 1 for the newly created
+buffer.
+
+```c
+void proc(dss s) {
+  char *s2 = dss_dup(s);
+  dss_free(s);
+  dss_free(s2);
+}
+
+int main(void) {
+  char *s1 = dss_new("hello");
+  proc(dss_refshare(s1));
+  dss_free(s1);
+  return 0;
+}
+```
+In the example above, `s2` points to a newly allocated copy of the buffer referenced by `s1`, with its own `ref_count` reset to 1.
+
+##
 
 
 
