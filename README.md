@@ -23,7 +23,7 @@ This technique reduce the need for multiple and separate memory allocation overh
 
 # API functions Documentation
 
-### Creating a new `dss` string
+### Creating a `dss` string
 
 There are two API functions available for creating a `dss` string.
 
@@ -65,7 +65,89 @@ thus requires to pass an additional parameter `len` which is the total length in
 In the example above, we can see that `dss_newb` is capable of storing binary. We also saw the output of `dss_len` to be `5` which is the total bytes stored 
 in the buffer including the null terminator.
 
-### 
+### Appending the `dss` buffer
+
+There are two sets of functions to append bytes in the `dss` buffer. The first set of functions mutates the `dss` buffer. It requires the callee to return the latest
+valid pointer to the recently mutated `dss` buffer back to the caller to prevent from dangling pointer issues.
+
+
+```c
+ dss dss_concat(dss s, const char *t);
+ dss dss_concatb(dss s, const void *t, size_t len);
+```
+In the example below, we pass parameter of type `char**` to the `proc` function so that we can return the updated valid pointer back to the `main`. At first, ownership
+is shared to `proc` (callee), then `proc` passes it back to `main` (caller). It is necessary because the appending function reallocate memory internally which shifts 
+the memory position making the original memory block invalid, resulting in dangling pointer issue. 
+
+```c
+void proc(char **s) {
+  char *new_str = dss_concat(*s, "world!!!");
+  *s = new_str;
+}
+
+int main(void) {
+  char *str = dss_new("hello");
+  proc(&str);
+  dss_free(str);
+  return 0;
+}
+```
+The below set of functions don't mutate the buffer but instead follow the copy-on-write (COW) semantics. 
+
+```c
+dss dss_concatcow(dss s, const char *t);
+dss dss_concatcowb(dss s, const char *t, size_t len);
+```
+A reference sharing counter is implemented implicitly in `dss`. To be able to use the COW based concatenation functions, always pass the `dss` parameter to it by
+incrementing the `ref_count` counter which tracks the number of references shared. 
+
+```c
+void proc(dss s) {
+  char *new_str = dss_concatcow(s, "world!!");
+  dss_free(new_str);
+  /*No need to call dss_free(s)*/
+  // dss_free(s)  
+}
+
+int main(void) {
+  char *str = dss_new("hello");
+  proc(dss_refshare(str));
+  dss_free(str);
+  return 0;
+}
+```
+In the example above, we pass the parameter to the `proc` function using `dss_refshare`. `dss_refshare` increments the `ref_count` counter to track the references
+shared and then returns the `dss` buffer. Always share the `dss` buffer through `dss_refshare` if reference counting has to be conducted. `dss_concatcow` internally
+decreases the `ref_count` having no need to call `dss_free(s)` explicitly in the `proc` function. 
+
+Reference counting shouldn't be used with appending function APIs that mutates the original buffer. That is because the mutating function APIs might have to reallocate
+memory which may shift the buffer address in the memory and free the original buffer. This will lead to undefined behaviour and double free issue. Below is short
+summary on where to use the `dss` internal reference counting and where not to use: 
+ 
+### USE reference tracking:
+-  while using COW related function APIs for appending the `dss` buffer such as `dss_concatcow` and `dss_concatcowb`. They only perform copy-on-write if there are
+multiple references.
+- for shared references in multiple processes. We won't be sure which process would end at last so reference tracking can be helpful to
+only free the object when the last running process ends.
+
+### DO NOT USE reference tracking:
+- when working with mutating function APIs such as `dss_concat` and `dss_concatb`.
+- when the process where object is shared mutates the object. In this case, the original reference should be updated with the valid
+latest reference.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
