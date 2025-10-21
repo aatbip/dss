@@ -139,7 +139,6 @@ void dss_free(dss s) {
     return;
   dss_hdr *hdr = DSS_HDR(s);
   /* free only if ref_count equals to 0. */
-  printf("ref: %d\n", hdr->ref_count);
   if (--hdr->ref_count == 0) {
     free(hdr);
   }
@@ -207,7 +206,7 @@ dss dss_concatcowb(dss s, const char *t, size_t len) {
  */
 dss dss_grow(dss s, size_t len) {
   dss_hdr *hdr = DSS_HDR(s);
-  if (len > hdr->len) {
+  if (len >= hdr->len) {
     hdr = dss_expand(hdr, len);
     memset(hdr->buf + hdr->len, 0, len);
     hdr->len = len;
