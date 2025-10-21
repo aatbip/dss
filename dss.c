@@ -132,6 +132,9 @@ dss dss_empty() {
 }
 
 void dss_free(dss s) {
+  /* Don't do anything if NULL*/
+  if (s == NULL)
+    return;
   dss_hdr *hdr = DSS_HDR(s);
   /* free only if ref_count equals to 0. */
   if (--hdr->ref_count == 0) {
