@@ -120,6 +120,8 @@ dss dss_dup(const dss s) {
     return NULL;
   }
   memcpy(dup_hdr, hdr, hdr->size);
+  /*Refresh the ref_count to 1*/
+  dup_hdr->ref_count = 1;
   return dup_hdr->buf;
 }
 
@@ -137,6 +139,7 @@ void dss_free(dss s) {
     return;
   dss_hdr *hdr = DSS_HDR(s);
   /* free only if ref_count equals to 0. */
+  printf("ref: %d\n", hdr->ref_count);
   if (--hdr->ref_count == 0) {
     free(hdr);
   }
@@ -192,8 +195,6 @@ dss dss_concatcowb(dss s, const char *t, size_t len) {
 
     /*Decrease the reference to transfer ownership back to the caller*/
     hdr->ref_count--;
-    /*Refresh the ref_count to 1*/
-    dup_hdr->ref_count = 1;
     return dup_hdr->buf;
   }
   return dss_concatb(s, t, len);
