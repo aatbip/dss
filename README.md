@@ -124,13 +124,13 @@ Reference counting shouldn't be used with appending function APIs that mutates t
 memory which may shift the buffer address in the memory and free the original buffer. This will lead to undefined behaviour and double free issue. Below is short
 summary on where to use the `dss` internal reference counting and where not to use: 
  
-### USE reference tracking:
+#### USE reference tracking:
 -  while using COW related function APIs for appending the `dss` buffer such as `dss_concatcow` and `dss_concatcowb`. They only perform copy-on-write if there are
 multiple references.
 - for shared references in multiple processes. We won't be sure which process would end at last so reference tracking can be helpful to
 only free the object when the last running process ends. Remember to free the object from all the places where references are shared.
 
-### DO NOT USE reference tracking:
+#### DO NOT USE reference tracking:
 - when working with mutating function APIs such as `dss_concat` and `dss_concatb`.
 - when the process where object is shared mutates the object. In this case, the original reference should be updated with the valid
 latest reference.
@@ -177,6 +177,8 @@ dss_free(s);
 Output> len: 6
 ```
 
+`dss_len` has O(1) complexity because `dss` internally book keeps the length count.
+
 ## Creating an empty `dss` string
 
 ```c
@@ -217,7 +219,60 @@ int main(void) {
 ```
 In the example above, `s2` points to a newly allocated copy of the buffer referenced by `s1`, with its own `ref_count` reset to 1.
 
-##
+## Formatting strings 
+
+```c
+dss dss_catprintf(dss s, dss (concat_func*)(dss s, const char *t), const char *fmt, ...);
+```
+
+`dss_catprintf` can format string using format specifier and then concatenate the formatted string to the original string buffer.
+
+```c
+char *s = dss_new("The sum is: ");
+char *temp = s;
+int a = 14, b = 21;
+s = dss_catprintf(dss_refshare(s), dss_concatcow, "%d", a + b);
+printf("%s\n", s);
+dss_free(s);
+dss_free(temp);
+
+Output> The sum is: 35  
+```
+
+This function takes 4 parameters as input. First parameter is the `dss` string itself to which the formatted string should be concatenated, second parameter is the 
+function pointer to the concatenation function, third parameter is the format string where format specifiers can be added, then finally arguments for the format
+specifiers if any. In the second parameter, pointer to either of `dss_concat` or `dss_concatcow` can be passed, which depends upon if we want to mutate the original
+string or not as discussed in their sections above.
+
+`dss_catprintf` can be used to create `dss` string directly from the format specifier.
+
+```c
+char *name = "world";
+char *s = dss_catprintf(dss_empty(), dss_concat, "hello, %s", name);
+printf("%s\n", s);
+dss_free(s);
+
+Output> hello world
+```
+
+It can also be used to convert numbers numbers into `dss` string.
+
+```c
+int num = 10021277;
+dss nums = dss_catprintf(dss_empty(), dss_concat, "%d", num);
+printf("%s\n", nums);
+dss_free(nums);
+
+Output> 10021277                                                                                                               
+        len: 9  
+```
+
+## Trimming the `dss` string
+
+```c
+dss dss_trim(dss, int, int);
+```
+
 
 
 
