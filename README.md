@@ -270,8 +270,29 @@ Output> 10021277
 ## Trimming the `dss` string
 
 ```c
-dss dss_trim(dss, int, int);
+dss dss_trim(dss s, int start, int end);
 ```
+This can be used to trim the `dss` string from `start` to `end`. This will shrink the memory to fit the trimmed string then return it.
+
+```c
+dss s1 = dss_new("hello world");
+s1 = dss_trim(s1, 0, 5);
+printf("s1: %s\n", s1);
+dss_free(s1);
+dss s2 = dss_new("hey you");
+s2 = dss_trim(s2, 0, -5);
+printf("s2: %s\n", s2);
+
+Output> s1: hello                                                                                                                                          
+        s2: hey  
+```
+
+# Error handling
+
+The `dss` APIs return that returns `dss` buffer can also return `NULL` for memory allocation related errors which can be checked for handling errors.
+
+# Performance benchmark
+
 
 
 
