@@ -23,7 +23,7 @@ This technique reduce the need for multiple and separate memory allocation overh
 
 # API functions Documentation
 
-### Creating a `dss` string
+## Creating a `dss` string
 
 There are two API functions available for creating a `dss` string.
 
@@ -65,7 +65,7 @@ thus requires to pass an additional parameter `len` which is the total length in
 In the example above, we can see that `dss_newb` is capable of storing binary. We also saw the output of `dss_len` to be `5` which is the total bytes stored 
 in the buffer including the null terminator.
 
-### Appending the `dss` buffer
+## Concatenating the `dss` buffer
 
 There are two sets of functions to append bytes in the `dss` buffer. The first set of functions mutates the `dss` buffer. It requires the callee to return the latest
 valid pointer to the recently mutated `dss` buffer back to the caller to prevent from dangling pointer issues.
@@ -135,7 +135,28 @@ only free the object when the last running process ends.
 - when the process where object is shared mutates the object. In this case, the original reference should be updated with the valid
 latest reference.
 
+## Destroying the `dss` buffer
+```c
+void dss_free(dss s);
+```
+`dss_free` checks for the `ref_count` count. If `ref_count` is equal to 0 then it gets the pointer to `dss` header and frees it. If `ref_count` is greater than 0 then
+it only decreases the `ref_count` and waits to free until only a single reference of the object exist. 
 
+## String length
+
+```c
+size_t dss_len(const dss s);
+```
+`dss_len` returns the length of the `dss` buffer along with the null terminator. Output in the example below is 6 because of the extra null terminator emphasizing 
+that `dss` always book keeps length and size information by adding the `DSS_NULLT` whose value is 1.
+
+```c
+char *s = dss_new("hello");
+printf("len: %zu\n", dss_len(s));
+dss_free(s);
+
+Output> 6
+```
 
 
 
