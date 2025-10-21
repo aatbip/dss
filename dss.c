@@ -229,7 +229,7 @@ dss dss_catprintf(dss s, dss (*concat_func)(dss, const char *), const char *fmt,
   /*find the total bytes needed in fmt string*/
   int tb = vsnprintf(NULL, 0, fmt, cp);
   va_end(cp);
-  char *temp = malloc(tb);
+  char *temp = malloc(tb + DSS_NULLT);
   vsnprintf(temp, tb + DSS_NULLT, fmt, ap);
   /*Expand memory for 'tb' bytes if needed is handled internally in
    * concat_func*/
