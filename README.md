@@ -1,6 +1,6 @@
 # DSS - Dynamic String Structure
 
-### DSS is a generic dynamic byte buffer inspired by antirez/sds. DSS is binary safe byte container that internally implements safe reference sharing without any need of writing wrappers manually. DSS strings are mutable but there are APIs implemented based on copy-on-write that can be utilized while mutating shared references. Internally handled reference sharing and copy-on-write APIs makes DSS unique from antires/sds.
+DSS is a generic dynamic byte buffer inspired by antirez/sds. DSS is binary safe byte container that internally implements safe reference sharing without any need of writing wrappers manually. DSS strings are mutable but there are APIs implemented based on copy-on-write that can be utilized while mutating shared references. Internally handled reference sharing and copy-on-write APIs makes DSS unique from antires/sds.
 
 # Design
 
