@@ -425,7 +425,7 @@ The graph shows that the peak memory usage exceeds 9 GB, almost double the final
 
 * **Optimization Targets**:
 
-    The dss_expand() function needs improvement to:
+    The `dss_expand()` function needs improvement to:
 
   - Cap exponential expansion beyond a reasonable threshold.
   - Implement adaptive growth (e.g., capped at 1.5× past a certain buffer size).
