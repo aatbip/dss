@@ -305,7 +305,7 @@ OS: Ubuntu 22.04.5 LTS \
 Kernel: Linux kernel 6.8.0-85-generic \
 CPU: Intel Core i7-10750H CPU (6 core, 12 threads) \
 Memory: 16 GB DDR4 \
-Compiler: GCC 11.4.0
+Compiler: GCC 11.4.0 with -O2 optimization
 
 Memory usage was profiled using Valgrind-3.18.1, and timing measurements were  obtained using a monotonic high-resolution clock (`clock_gettime(CLOCK_MONOTONIC)`), 
 providing nanosecond precision and recorded in milliseconds for reporting.
