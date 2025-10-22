@@ -293,16 +293,147 @@ The `dss` APIs return that returns `dss` buffer can also return `NULL` for memor
 
 # Performance benchmark
 
+Multiple tests were performed to evaluate the performance and memory behavior of DSS. Experiments were designed to measure both throughput (concatenation performance) 
+and memory efficiency under two distinct workloads:
+
+1. Repeated concatenation of small binary chunks
+2. Concatenation of a few large memory buffers
+
+All experiments were executed on the same environment under identical conditions. The system detail is as follows:
+
+OS: Ubuntu 22.04.5 LTS \
+Kernel: Linux kernel 6.8.0-85-generic \
+CPU: Intel Core i7-10750H CPU (6 core, 12 threads) \
+Memory: 16 GB DDR4 \
+Compiler: GCC 11.4.0
+
+Memory usage was profiled using Valgrind-3.18.1, and timing measurements were  obtained using a monotonic high-resolution clock (`clock_gettime(CLOCK_MONOTONIC)`), 
+providing nanosecond precision and recorded in milliseconds for reporting.
+
+## Experiment 1 — Repeated Concatenation of Small Binary Data
+
+In this test, 5 bytes of binary data were repeatedly concatenated into a dss buffer 1 billion times, resulting in a final buffer size of approximately 5 GB.
+This test stresses allocation overhead and reallocation frequency with extremely high operation counts on small payloads.
+
+```text
+| Metric              | Value (ms / Bytes) |
+| ------------------- | ------------------ |
+| Time taken (ms)     | 6845.9522          |
+| Peak memory (Bytes) | 5368713160         |
+```
+
+Below is the Valgrind Massif heap memory profile graph, representing the evolution of heap usage during execution:
+
+```text
+    GB
+5.000^                                   #################################### 
+     |                                   #                                    
+     |                                   #                                    
+     |                                   #                                    
+     |                                   #                                    
+     |                                   #                                    
+     |                                   #                                    
+     |                                   #                                    
+     |                                   #                                    
+     |                                   #                                    
+     |                  :::::::::::::::::#                                    
+     |                  :                #                                    
+     |                  :                #                                    
+     |                  :                #                                    
+     |                  :                #                                    
+     |         @@@@@@@@@:                #                                    
+     |         @        :                #                                    
+     |         @        :                #                                    
+     |    :::::@        :                #                                    
+     |  :::    @        :                #                                    
+   0 +----------------------------------------------------------------------->GB
+     0                                                                   10.00
+
+Number of snapshots: 36
+Detailed snapshots: [9, 19, 29, 32 (peak)]
+```
+
+The graph shows an exponential memory growth pattern. This reflects the exponential buffer growth strategy in DSS with each concatenation triggering 
+a reallocation to larger capacity blocks.
 
 
 
+### Experiment 2 — Concatenation of Large Memory Blocks
+
+In this test, a 1 GB buffer was pre-allocated, initialized, and concatenated into a dss buffer five times, producing a final combined size of 5 GB. 
+This workload emphasizes throughput and peak allocation efficiency for fewer, larger operations.
+
+```text
+| Metric              | Value (ms / Bytes) |
+| ------------------- | ------------------ |
+| Time taken (ms)     | 2493.3176          |
+| Peak memory (Bytes) | 9663684496         |
+
+```
 
 
+Below graph shows Valgrind Massif heap memory profile.
 
+```text
+    GB
+9.000^                                   ################################     
+     |                                   #                                    
+     |                                   #                                    
+     |                                   #                                    
+     |                                   #                                    
+     |                                   #                                    
+     |                                   #                                    
+     |                                   #                                    
+     |                                   #                                    
+     |                    :::::::::::::::#                                    
+     |                    :              #                                    
+     |                    :              #                                    
+     |                    :              #                                    
+     |                    :              #                                    
+     |            :::::::::              #                                    
+     |            :       :              #                                    
+     |            :       :              #                                    
+     |            :       :              #                                    
+     |    :::::::::       :              #                               :::: 
+     |    :       :       :              #                               :    
+   0 +----------------------------------------------------------------------->GB
+     0                                                                   18.00
 
+Number of snapshots: 11
+Detailed snapshots: [6 (peak)]
+```
 
+The graph shows that the peak memory usage exceeds 9 GB, almost double the final 5 GB string size.
 
+### Analysis and Engineering Insight
 
+* **Performance**:
 
+    DSS demonstrates strong throughput characteristics, completing the small-chunk concatenation benchmark in ~6.8s and large-buffer concatenation in ~2.5s, 
+    both for 5 GB of final data. The throughput gain in Experiment 2 highlights the low overhead of bulk operations compared to repetitive small concatenations.
 
+* **Memory Efficiency**:
 
+    Memory consumption is significantly higher than the actual data size peaking at 9.6 GB for a 5 GB dataset.
+    
+    This is primarily due to:
+
+    1. Exponential growth factor in the reallocation logic (`dss_expand`), leading to temporary over-allocation.
+
+    2. Lack of memory shrinkage after concatenation completes and capping exponential expansion beyond a threshold.
+
+* **Optimization Targets**:
+
+    The dss_expand() function needs improvement to:
+
+  - Cap exponential expansion beyond a reasonable threshold.
+
+  - Implement adaptive growth (e.g., capped at 1.5× past a certain buffer size).
+
+  - Introduce buffer compaction/shrinking after large concatenation sequences.
+
+### Summary
+
+DSS achieves high performance at the cost of excessive memory overhead. The Valgrind Massif profiles clearly visualize the aggressive exponential 
+expansion behavior and its impact on peak heap usage. Introducing controlled growth heuristics and post-expansion optimizations in `dss_expand` will 
+significantly improve memory efficiency without compromising speed.
