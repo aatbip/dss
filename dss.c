@@ -20,7 +20,8 @@ typedef struct __attribute__((__packed__)) {
   char buf[];
 } dss_hdr;
 
-/*It reallocates memory if required otherwise returns the same address*/
+/*It reallocates memory if required otherwise returns the same address
+ * This function can be optimized further as per the benchmarks.*/
 static dss_hdr *dss_expand(dss_hdr *hdr, size_t len) {
 
   /* DSS_NULLT is not included in calculating size_t needed because
@@ -35,8 +36,7 @@ static dss_hdr *dss_expand(dss_hdr *hdr, size_t len) {
    * This approach is taken to minimize realloc call
    * everytime dss_concat is called.
    *
-   * Note: should stop increasing size if it's already crossing
-   * the limit. This logic should be added later.
+   * More optimizations to be done for this.
    */
   size_t new_cap = total * 2;
   if (new_cap < needed)
@@ -144,20 +144,8 @@ void dss_free(dss s) {
   }
 }
 
-/* Always use dss_refshare when passing a dss string to another function
- * that will share ownership of it. This ensures dss_hdr->ref_count is
- * incremented correctly for reference tracking.
- *
- * Note:
- * - dss_refshare should be used only when transferring shared ownership.
- * - The callee (the receiver of the shared reference) is responsible
- *   for eventually calling dss_free() once done except if callee
- *   decides to use dss_concatcow for mutating the shared object, in which case,
- *   dss_concatcow will implicitly unshare the shared object and trasfer the
- * ownership back to the caller.
- * - You can pass the dss string directly (without dss_refshare) when
- *   the callee is only borrowing. In this case
- *   callee shouldn't call dss_free() and no ref_count is incremented.
+/* Increases the ref_count in the header. See readme for notes on using
+ * reference tracking in dss.
  */
 
 dss dss_refshare(dss s) {
