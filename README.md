@@ -1,14 +1,16 @@
 # DSS - Dynamic String Structure
 
-DSS is a generic dynamic byte buffer inspired by antirez/sds. DSS is binary safe byte container that internally implements safe reference sharing without any need of writing wrappers manually. DSS strings are mutable but there are APIs implemented based on copy-on-write that can be utilized while mutating shared references. Internally handled reference sharing and copy-on-write APIs makes DSS unique from antires/sds.
+DSS is a generic dynamic byte buffer inspired by antirez/sds. DSS is binary safe byte container that internally implements safe reference sharing without 
+any need of writing wrappers manually. DSS strings are mutable but there are APIs implemented based on copy-on-write that can be utilized while mutating shared 
+references. Internally handled reference sharing and copy-on-write APIs make DSS unique from SDS.
 
 # Design
 
-DSS contains `dss_hdr` struct internally that contains members to store meta data about the buffer. This struct also contains a 
+DSS declares `dss_hdr` struct that contains members to store meta data about the buffer. This struct also contains a 
 flexible array member `buf` which is the actual buffer where DSS string is stored. DSS string is always null terminated making it usable with the
 standard C string manipulating functions.
 
-```
+```text
 ---------------------------------------------------------------------------
 | Header: size, len, and ref_count | Binary safe buffer: *buf | Null term |
 ---------------------------------------------------------------------------
@@ -16,10 +18,10 @@ standard C string manipulating functions.
                                    `-> *dss returned to the user
 ```
 When a DSS string is created, it returns pointer to the null terminated byte buffer `buf`. Meta data  are `size` and `len` of type `uint64_t`, and `ref_count` of type
-`uint32_t`. The member `size` book keeps the total size in bytes of the `dss_hdr` struct including the flexible array member `buf` and the null term, `len` 
+`uint32_t`. The member `size` book keeps the total size in bytes allocated by the `dss_hdr` struct including the flexible array member `buf` and the null term, `len` 
 book keeps the number of bytes occupied in the `buf`, and `ref_count` tracks the number of shared references. The flexible array member `buf` is not allocated 
-separately but lives with the same sequence of memory allocation along with `dss_hdr`, where actual bytes are stored which is always concluded with the null terminator.
-This technique reduce the need for multiple and separate memory allocation overhead for the struct and the string buffer as seen in other C string libraries.
+separately but lives with the same sequence of memory along with `dss_hdr`. `buf` points to the memory where the null terminated bytes are stored. This technique 
+reduce the need for multiple and separate memory allocation overhead for the struct and the string buffer as seen in other C string libraries.
 
 # API functions Documentation
 
@@ -32,7 +34,7 @@ dss dss_new(const char *t);
 dss dss_newb(const void *t, size_t len);
 ```
 
-Both of the above two functions allocate memory in the heap and return `dss` string which is of type `char*`.
+Both of the above two functions allocate memory in the heap, initialize it with the string byte and return the pointer to the memory `dss` which is of type `char*`.
 
 ```c
 dss s = dss_new("hello world!");
@@ -43,7 +45,7 @@ Output> hello world!
 ```
 
 `dss_newb` where b stands for binary is used to create strings from binary data. Unlike `dss_new`, `dss_newb` doesn't assume the string to conclude with a null term
-thus requires to pass an additional parameter `len` which is the total length in bytes of the binary. 
+thus requires to pass an additional parameter `len` which is the total length in byte of the binary. 
 
 ```c
  char t[4];
@@ -62,7 +64,7 @@ thus requires to pass an additional parameter `len` which is the total length in
          len: 5
 ```
 
-In the example above, we can see that `dss_newb` is capable of storing binary. We also saw the output of `dss_len` to be `5` which is the total bytes stored 
+In the example above, we can see that `dss_newb` is capable of storing binary. Notice the output of `dss_len` to be `5` which is the total bytes stored 
 in the buffer including the null terminator.
 
 ## Concatenating the `dss` buffer
@@ -200,7 +202,7 @@ In the above example, `dss_len` output on an empty `dss` string is 1 because `ds
 ```c
 dss dss_dup(const dss s);
 ```
-It copies the `dss` string to a new buffer and returns the pointer to the new buffer. It also refreshes the `ref_count` counter to 1 for the newly created
+It copies the `dss` string into a new buffer and returns the pointer to the new buffer. It also resets the `ref_count` counter to 1 for the newly created
 buffer.
 
 ```c
@@ -301,11 +303,11 @@ and memory efficiency under two distinct workloads:
 
 All experiments were executed on the same environment under identical conditions. The system detail is as follows:
 
-OS: Ubuntu 22.04.5 LTS \
-Kernel: Linux kernel 6.8.0-85-generic \
-CPU: Intel Core i7-10750H CPU (6 core, 12 threads) \
-Memory: 16 GB DDR4 \
-Compiler: GCC 11.4.0 with -O2 optimization
+**OS:** Ubuntu 22.04.5 LTS \
+**Kernel:** Linux kernel 6.8.0-85-generic \
+**CPU:** Intel Core i7-10750H CPU (6 core, 12 threads) \
+**Memory:** 16 GB DDR4 \
+**Compiler:** GCC 11.4.0 with -O2 optimization
 
 Memory usage was profiled using Valgrind-3.18.1, and timing measurements were  obtained using a monotonic high-resolution clock (`clock_gettime(CLOCK_MONOTONIC)`), 
 providing nanosecond precision and recorded in milliseconds for reporting.
@@ -419,7 +421,6 @@ The graph shows that the peak memory usage exceeds 9 GB, almost double the final
     This is primarily due to:
 
     1. Exponential growth factor in the reallocation logic (`dss_expand`), leading to temporary over-allocation.
-
     2. Lack of memory shrinkage after concatenation completes and capping exponential expansion beyond a threshold.
 
 * **Optimization Targets**:
@@ -427,9 +428,7 @@ The graph shows that the peak memory usage exceeds 9 GB, almost double the final
     The dss_expand() function needs improvement to:
 
   - Cap exponential expansion beyond a reasonable threshold.
-
   - Implement adaptive growth (e.g., capped at 1.5× past a certain buffer size).
-
   - Introduce buffer compaction/shrinking after large concatenation sequences.
 
 ### Summary
