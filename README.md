@@ -312,7 +312,7 @@ All experiments were executed on the same environment under identical conditions
 Memory usage was profiled using Valgrind-3.18.1, and timing measurements were  obtained using a monotonic high-resolution clock (`clock_gettime(CLOCK_MONOTONIC)`), 
 providing nanosecond precision and recorded in milliseconds for reporting.
 
-## Experiment 1 — Repeated Concatenation of Small Binary Data
+### Experiment 1 — Repeated Concatenation of Small Binary Data
 
 In this test, 5 bytes of binary data were repeatedly concatenated into a dss buffer 1 billion times, resulting in a final buffer size of approximately 5 GB.
 This test stresses allocation overhead and reallocation frequency with extremely high operation counts on small payloads.
